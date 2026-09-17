@@ -53,7 +53,7 @@ func New(cfg *config.Config) (*Sqlite, error) {
 		description TEXT,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (wallet_id) REFERENCES wallets (id),
-		FOREIGN. KEY (counterpart_wallet_id) REFERENCES wallets (id)
+		FOREIGN KEY (counterpart_wallet_id) REFERENCES wallets (id)
 	)`)
 
 	if err != nil {
