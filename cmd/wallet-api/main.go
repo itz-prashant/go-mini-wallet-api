@@ -13,6 +13,7 @@ import (
 
 	"github.com/itz-prashant/mini-wallet-api/internal/config"
 	"github.com/itz-prashant/mini-wallet-api/internal/db"
+	"github.com/itz-prashant/mini-wallet-api/internal/wallet"
 )
 
 
@@ -37,6 +38,12 @@ func main() {
 
 		json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
 	})
+
+	walletRepo := wallet.NewRepository(sqliteDb.Db)
+	walletService := wallet.NewService(walletRepo)
+	walletHanlder := wallet.NewHandler(walletService)
+
+	mux.HandleFunc("POST /api/v1/wallets", walletHanlder.HandleCreateWallet)
 
 	server := http.Server{
 		Addr: cfg.Address,
