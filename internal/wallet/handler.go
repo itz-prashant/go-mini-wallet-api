@@ -69,3 +69,36 @@ func (h *Handler) HandleGetWallet(w http.ResponseWriter, r *http.Request) {
 
 	response.WriteJson(w, http.StatusOK, wallet)
 }
+
+func (h *Handler) HandleTransfer(w http.ResponseWriter, r *http.Request) {
+	var req TransferRequest
+
+	if err := response.ReadJson(r, &req); err != nil {
+		response.WriteError(w, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+
+	err := h.service.Transfer(r.Context(), req)
+
+	if err != nil {
+		if errors.Is(err, ErrWalletNotFound) {
+			response.WriteError(w, http.StatusNotFound, "wallet not found")
+			return
+		}
+
+		if errors.Is(err, ErrInsufficientBalance) ||
+			errors.Is(err, ErrInvalidAmount) ||
+			errors.Is(err, ErrSameWalletTransfer) ||
+			errors.Is(err, ErrInvalidId) {
+			response.WriteError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response.WriteJson(w, http.StatusOK, map[string]string{
+		"status":  "success",
+		"message": "fund transfer successfully",
+	})
+}

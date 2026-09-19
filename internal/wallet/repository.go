@@ -56,3 +56,71 @@ func (s *sqliteRepository) GetByID(ctx context.Context, id int64) (*Wallet, erro
 
 	return &wallet, nil
 }
+
+func (s *sqliteRepository) TransferTx(ctx context.Context, fromId int64, toId int64, amount float64, description string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return fmt.Errorf("Failed to begin transaction: %w", err)
+	}
+
+	defer tx.Rollback()
+
+	deductQuery := `UPDATE wallets SET balance = balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND balance >= ?`
+
+	res, err := tx.ExecContext(ctx, deductQuery, amount, fromId, amount)
+
+	if err != nil {
+		return fmt.Errorf("failed to deduct balance from wallet %d: %w", fromId, err)
+	}
+
+	rowAffected, err := res.RowsAffected()
+
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected on sender: %w", err)
+	}
+
+	if rowAffected == 0 {
+		return ErrInsufficientBalance
+	}
+
+	creditQuery := `UPDATE wallets SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+
+	res, err = tx.ExecContext(ctx, creditQuery, amount, toId)
+
+	if err != nil {
+		return fmt.Errorf("failed to credit balance to wallet %d: %w", toId, err)
+	}
+
+	rowAffected, err = res.RowsAffected()
+
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected on receiver: %w", err)
+	}
+
+	if rowAffected == 0 {
+		return ErrWalletNotFound
+	}
+
+	insertDebitQuery := `INSERT INTO transactions (wallet_id, counterpart_wallet_id, type, amount, description, created_at) VALUES(?,?,'transfer_out', ?, ?, CURRENT_TIMESTAMP)`
+
+	_, err = tx.ExecContext(ctx, insertDebitQuery, fromId, toId, amount, description)
+
+	if err != nil {
+		return fmt.Errorf("failed to record debit transer: %w", err)
+	}
+
+	insertCreditQuery := `INSERT INTO transactions (wallet_id, counterpart_wallet_id, type, amount, description, created_at) VALUES(?,?,'transfer_in', ?, ?, CURRENT_TIMESTAMP)`
+
+	_, err = tx.ExecContext(ctx, insertCreditQuery, toId, fromId, amount, description)
+
+	if err != nil {
+		return fmt.Errorf("failed to record credit transaction: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}

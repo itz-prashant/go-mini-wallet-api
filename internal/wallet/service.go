@@ -65,3 +65,25 @@ func (s *Service) GetWallet(ctx context.Context, id int64) (*Wallet, error) {
 
 	return wallet, nil
 }
+
+func (s *Service) Transfer(ctx context.Context, req TransferRequest) error {
+	if req.FromWalletId <= 0 || req.ToWalletId <= 0 {
+		return ErrInvalidId
+	}
+
+	if req.FromWalletId == req.ToWalletId {
+		return ErrSameWalletTransfer
+	}
+
+	if req.Amount <= 0 {
+		return ErrInvalidAmount
+	}
+
+	err := s.repo.TransferTx(ctx, req.FromWalletId, req.ToWalletId,req.Amount, req.Description)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
