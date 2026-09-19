@@ -46,6 +46,7 @@ func main() {
 	mux.HandleFunc("POST /api/v1/wallets", walletHanlder.HandleCreateWallet)
 	mux.HandleFunc("GET /api/v1/wallets/{id}", walletHanlder.HandleGetWallet)
 	mux.HandleFunc("POST /api/v1/transfers", walletHanlder.HandleTransfer)
+	mux.HandleFunc("GET /api/v1/wallet/{id}/transactions", walletHanlder.HandleGetTransactions)
 
 	server := http.Server{
 		Addr: cfg.Address,

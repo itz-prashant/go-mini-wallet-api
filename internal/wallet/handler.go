@@ -102,3 +102,38 @@ func (h *Handler) HandleTransfer(w http.ResponseWriter, r *http.Request) {
 		"message": "fund transfer successfully",
 	})
 }
+
+func (h *Handler) HandleGetTransactions(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	walletId, err := strconv.ParseInt(idStr, 10, 64)
+
+	if err != nil {
+		response.WriteError(w, http.StatusBadRequest, "invalid wallet id")
+		return
+	}
+
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	txType := query.Get("type")
+
+	filter := TransactionFilter{
+		WalletID: walletId,
+		Type:     txType,
+		Page:     page,
+		Limit:    limit,
+	}
+
+	transactions, err := h.service.GetTransactions(r.Context(), filter)
+
+	if err != nil {
+		if errors.Is(err, ErrInvalidId) {
+			response.WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response.WriteJson(w, http.StatusOK, transactions)
+}

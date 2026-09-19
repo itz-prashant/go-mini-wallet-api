@@ -87,3 +87,21 @@ func (s *Service) Transfer(ctx context.Context, req TransferRequest) error {
 
 	return nil
 }
+
+func (s *Service) GetTransactions(ctx context.Context, filter TransactionFilter) ([]Transaction, error) {
+	if filter.WalletID <= 0 {
+		return nil, ErrInvalidId
+	}
+
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+
+	if filter.Limit <= 0 {
+		filter.Limit = 10
+	}else if filter.Limit > 100 {
+		filter.Limit = 100
+	}
+
+	return s.repo.GetTransaction(ctx, filter)
+}

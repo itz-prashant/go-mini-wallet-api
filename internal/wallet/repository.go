@@ -124,3 +124,50 @@ func (s *sqliteRepository) TransferTx(ctx context.Context, fromId int64, toId in
 
 	return nil
 }
+
+func (s *sqliteRepository) GetTransaction(ctx context.Context, filter TransactionFilter) ([]Transaction, error) {
+	query := `SELECT id, wallet_id, counterpart_wallet_id, type, amount, description, created_at FROM transactions WHERE wallet_id = ?`
+
+	args := []any{filter.WalletID}
+
+	if filter.Type != "" {
+		query += " AND type = ?"
+		args = append(args, filter.Type)
+	}
+
+	offset := (filter.Page - 1) * filter.Limit
+	query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	args = append(args, filter.Limit, offset)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query transactions: %w", err)
+	}
+
+	defer rows.Close()
+
+	transactions := make([]Transaction, 0)
+
+	for rows.Next() {
+		var t Transaction
+		err := rows.Scan(
+			&t.ID,
+			&t.WalletID,
+			&t.CounterpartWalletID,
+			&t.Type,
+			&t.Amount,
+			&t.Description,
+			&t.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan transaction row: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("transaction rows iteration error: %w", err)
+	}
+
+	return transactions, nil
+}
