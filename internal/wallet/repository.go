@@ -3,6 +3,7 @@ package wallet
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -34,4 +35,24 @@ func (s *sqliteRepository) Create(ctx context.Context, wallet *Wallet) error {
 	wallet.ID = id
 
 	return nil
+}
+
+func (s *sqliteRepository) GetByID(ctx context.Context, id int64) (*Wallet, error) {
+
+	query := `SELECT id, owner_name, balance, currency, created_at, updated_at FROM wallets WHERE id = ?`
+
+	row := s.db.QueryRowContext(ctx, query, id)
+
+	var wallet Wallet
+
+	err := row.Scan(&wallet.ID, &wallet.OwnerName, &wallet.Balance, &wallet.Currency, &wallet.CreatedAt, &wallet.UpdatedAt)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrWalletNotFound
+		}
+		return nil, fmt.Errorf("failed to get wallet by id: %w", err)
+	}
+
+	return &wallet, nil
 }

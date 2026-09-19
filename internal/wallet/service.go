@@ -37,13 +37,27 @@ func (s *Service) CreateWallet(ctx context.Context, req CreateWalletRequest) (*W
 
 	wallet := &Wallet{
 		OwnerName: req.OwnerName,
-		Currency: req.Currency,
-		Balance: req.InitialBalance,
+		Currency:  req.Currency,
+		Balance:   req.InitialBalance,
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 	}
 
 	err := s.repo.Create(ctx, wallet)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return wallet, nil
+}
+
+func (s *Service) GetWallet(ctx context.Context, id int64) (*Wallet, error) {
+	if id <= 0 {
+		return nil, ErrInvalidId
+	}
+
+	wallet, err := s.repo.GetByID(ctx, id)
 
 	if err != nil {
 		return nil, err

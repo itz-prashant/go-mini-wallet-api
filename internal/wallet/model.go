@@ -2,8 +2,12 @@ package wallet
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrWalletNotFound = errors.New("wallet not found")
+var ErrInvalidId = errors.New("invalid wallet id") 
 
 type Wallet struct {
 	ID int64 `json:"id"`
@@ -22,4 +26,5 @@ type CreateWalletRequest struct {
 
 type Repository interface {
 	Create(ctx context.Context, wallet *Wallet) error
+	GetByID(ctx context.Context, id int64) (*Wallet, error)
 }

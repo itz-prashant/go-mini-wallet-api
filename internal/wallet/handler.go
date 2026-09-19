@@ -3,6 +3,7 @@ package wallet
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/itz-prashant/mini-wallet-api/internal/utils/response"
 )
@@ -37,4 +38,34 @@ func (h *Handler) HandleCreateWallet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteJson(w, http.StatusCreated, wallet)
+}
+
+func (h *Handler) HandleGetWallet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+
+	if err != nil {
+		response.WriteError(w, http.StatusBadRequest, "invalid wallet id")
+		return
+	}
+
+	wallet, err := h.service.GetWallet(r.Context(), id)
+
+	if err != nil {
+		if errors.Is(err, ErrWalletNotFound) {
+			response.WriteError(w, http.StatusNotFound, "wallet not found")
+			return
+		}
+
+		if errors.Is(err, ErrInvalidId) {
+			response.WriteError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		// 3. Unexpected Server Error (500)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response.WriteJson(w, http.StatusOK, wallet)
 }
